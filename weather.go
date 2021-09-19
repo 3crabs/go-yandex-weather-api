@@ -3,7 +3,10 @@ package weather
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"time"
 )
 
 // Weather Информация о погоде
@@ -185,4 +188,79 @@ func GetWeather(yandexWeatherApiKey string, lat float32, lon float32) (Weather, 
 	var weather Weather
 	_ = json.NewDecoder(resp.Body).Decode(&weather)
 	return weather, nil
+}
+
+// GetWeatherWithCache Получение погоды из Яндекс API с использованием кэша в json файле
+func GetWeatherWithCache(yandexWeatherApiKey string, lat float32, lon float32, cacheTimeSecond int64) (Weather, error) {
+	weathers, err := readWeathers("weathers.json")
+	if err != nil {
+		return Weather{}, err
+	}
+	if len(weathers) > 0 {
+		for _, w := range weathers {
+			if w.Info.Lat == lat && w.Info.Lon == lon && time.Now().Unix()-w.Now < cacheTimeSecond {
+				return w, nil
+			}
+		}
+	}
+	w, err := GetWeather(yandexWeatherApiKey, lat, lon)
+	if err != nil {
+		return Weather{}, err
+	}
+	weathers = append(weathers, w)
+	err = writeWeathers("weathers.json", weathers)
+	if err != nil {
+		return Weather{}, err
+	}
+	return w, nil
+}
+
+// writeWeathers запись массива погод в кэш
+func writeWeathers(fileName string, weathers []Weather) error {
+	f, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	bytes, err := json.Marshal(weathers)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(bytes)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// readWeathers чтение массива погод из кэша
+func readWeathers(fileName string) ([]Weather, error) {
+	data, err := readFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+	if data == nil {
+		return []Weather{}, err
+	}
+	var weathers []Weather
+	err = json.Unmarshal(data, &weathers)
+	if err != nil {
+		return nil, err
+	}
+	return weathers, nil
+}
+
+// readFile чтение массива байт из файла
+func readFile(fileName string) ([]byte, error) {
+	file, err := os.Open(fileName)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	b, _ := ioutil.ReadAll(file)
+	return b, nil
 }
