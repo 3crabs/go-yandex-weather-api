@@ -191,14 +191,14 @@ func GetWeather(yandexWeatherApiKey string, lat float32, lon float32) (Weather, 
 }
 
 // GetWeatherWithCache Получение погоды из Яндекс API с использованием кэша в json файле
-func GetWeatherWithCache(yandexWeatherApiKey string, lat float32, lon float32, cacheTimeSecond int64) (Weather, error) {
+func GetWeatherWithCache(yandexWeatherApiKey string, lat float32, lon float32, cacheDuration time.Duration) (Weather, error) {
 	weathers, err := readWeathers("weathers.json")
 	if err != nil {
 		return Weather{}, err
 	}
 	if len(weathers) > 0 {
 		for _, w := range weathers {
-			if w.Info.Lat == lat && w.Info.Lon == lon && time.Now().Unix()-w.Now < cacheTimeSecond {
+			if w.Info.Lat == lat && w.Info.Lon == lon && time.Now().Unix()-w.Now < int64(cacheDuration.Seconds()) {
 				return w, nil
 			}
 		}
