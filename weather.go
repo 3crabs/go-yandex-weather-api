@@ -114,6 +114,35 @@ type Forecast struct {
 	Parts []Part `json:"parts"` // Прогнозы по времени суток.
 }
 
+// GetMoon получение фазы луны
+func (f Forecast) GetMoon() string {
+	if f.MoonCode == 0 {
+		return "полнолуние"
+	}
+	if f.MoonCode >= 1 && f.MoonCode <= 3 {
+		return "убывающая Луна"
+	}
+	if f.MoonCode == 4 {
+		return "последняя четверть"
+	}
+	if f.MoonCode >= 5 && f.MoonCode <= 7 {
+		return "убывающая Луна"
+	}
+	if f.MoonCode == 8 {
+		return "новолуние"
+	}
+	if f.MoonCode >= 9 && f.MoonCode <= 11 {
+		return "растущая Луна"
+	}
+	if f.MoonCode == 12 {
+		return "первая четверть"
+	}
+	if f.MoonCode >= 9 && f.MoonCode <= 11 {
+		return "растущая Луна"
+	}
+	return ""
+}
+
 // Part Прогнозы по времени суток.
 type Part struct {
 	PartName string `json:"part_name"` // Название времени суток. Возможные значения:
