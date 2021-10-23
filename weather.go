@@ -77,8 +77,9 @@ type Fact struct {
 	//«spring» — весна
 	ObsTime int64 `json:"obs_time"` // Время замера погодных данных в формате Unixtime
 }
+
 // conditions - коды погодного описания и значения на русском языке, получаемые из Fact.Condition
-var conditions = map[string]string {
+var conditions = map[string]string{
 	"partly-cloudy":          "малооблачно",
 	"overcast":               "пасмурно",
 	"drizzle":                "морось",
@@ -224,6 +225,24 @@ type Part struct {
 	PrecMm     int `json:"prec_mm"`     // Прогнозируемое количество осадков (в мм)
 	PrecPeriod int `json:"prec_period"` // Прогнозируемый период осадков (в минутах)
 	PrecProb   int `json:"prec_prob"`   // Вероятность выпадения осадков
+}
+
+// conditions - коды погодного описания и значения на русском языке, получаемые из Fact.Condition
+var partNames = map[string]string{
+	"night":   "ночь",
+	"morning": "утро",
+	"day":     "день",
+	"evening": "вечер",
+}
+
+// GetPartName получение названия времени суток на русском языке
+func (p Part) GetPartName() string {
+	return partNames[p.PartName]
+}
+
+// GetCondition получение описания погоды на русском языке
+func (p Part) GetCondition() string {
+	return conditions[p.Condition]
 }
 
 // GetWeather Получение погоды из Яндекс API
