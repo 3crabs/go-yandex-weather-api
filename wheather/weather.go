@@ -1,8 +1,10 @@
-package weather
+package wheather
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/3crabs/go-requests/go-requests"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -51,9 +53,9 @@ type Fact struct {
 	//thunderstorm — гроза
 	//thunderstorm-with-rain — дождь с грозой
 	//thunderstorm-with-hail — гроза с градом
-	WindSpeed int    `json:"wind_speed"` // Скорость ветра (в м/с)
-	WindGust  int    `json:"wind_gust"`  // Скорость порывов ветра (в м/с)
-	WindDir   string `json:"wind_dir"`   // Направление ветра. Возможные значения:
+	WindSpeed float64 `json:"wind_speed"` // Скорость ветра (в м/с)
+	WindGust  float64 `json:"wind_gust"`  // Скорость порывов ветра (в м/с)
+	WindDir   string  `json:"wind_dir"`   // Направление ветра. Возможные значения:
 	//«nw» — северо-западное
 	//«n» — северное
 	//«ne» — северо-восточное
@@ -206,10 +208,10 @@ type Part struct {
 	Daytime string `json:"daytime"` // Светлое или темное время суток. Возможные значения:
 	//«d» — светлое время суток
 	//«n» — темное время суток
-	Polar     bool   `json:"polar"`      // Признак того, что время суток, указанное в поле daytime, является полярным
-	WindSpeed int    `json:"wind_speed"` // Скорость ветра (в м/с)
-	WindGust  int    `json:"wind_gust"`  // Скорость порывов ветра (в м/с)
-	WindDir   string `json:"wind_dir"`   // Направление ветра. Возможные значения:
+	Polar     bool    `json:"polar"`      // Признак того, что время суток, указанное в поле daytime, является полярным
+	WindSpeed float64 `json:"wind_speed"` // Скорость ветра (в м/с)
+	WindGust  float64 `json:"wind_gust"`  // Скорость порывов ветра (в м/с)
+	WindDir   string  `json:"wind_dir"`   // Направление ветра. Возможные значения:
 	//«nw» — северо-западное
 	//«n» — северное
 	//«ne» — северо-восточное
@@ -246,30 +248,28 @@ func (p Part) GetCondition() string {
 }
 
 // GetWeather Получение погоды из Яндекс API
-func GetWeather(yandexWeatherApiKey string, lat float32, lon float32) (Weather, error) {
+func GetWeather(ctx context.Context, yandexWeatherApiKey string, lat float32, lon float32) (*Weather, error) {
 	url := fmt.Sprintf("https://api.weather.yandex.ru/v2/informers?lat=%f&lon=%f&lang=ru_RU", lat, lon)
-	client := http.Client{}
-	request, err := http.NewRequest("GET", url, nil)
+	w := &Weather{}
+	err := requests.GetRequest(
+		ctx,
+		url,
+		w,
+		func(req *http.Request) {
+			req.Header.Add("X-Yandex-API-Key", yandexWeatherApiKey)
+		},
+	)
 	if err != nil {
-		return Weather{}, err
+		return nil, err
 	}
-	request.Header.Add("X-Yandex-API-Key", yandexWeatherApiKey)
-	resp, err := client.Do(request)
-	if err != nil {
-		return Weather{}, err
-	}
-	defer resp.Body.Close()
-
-	var weather Weather
-	_ = json.NewDecoder(resp.Body).Decode(&weather)
-	return weather, nil
+	return w, err
 }
 
 // GetWeatherWithCache Получение погоды из Яндекс API с использованием кэша в json файле
-func GetWeatherWithCache(yandexWeatherApiKey string, lat float32, lon float32, cacheDuration time.Duration) (Weather, error) {
+func GetWeatherWithCache(ctx context.Context, yandexWeatherApiKey string, lat float32, lon float32, cacheDuration time.Duration) (*Weather, error) {
 	weathers, err := readWeathers("weathers.json")
 	if err != nil {
-		return Weather{}, err
+		return nil, err
 	}
 	if len(weathers) > 0 {
 		for _, w := range weathers {
@@ -278,20 +278,20 @@ func GetWeatherWithCache(yandexWeatherApiKey string, lat float32, lon float32, c
 			}
 		}
 	}
-	w, err := GetWeather(yandexWeatherApiKey, lat, lon)
+	w, err := GetWeather(ctx, yandexWeatherApiKey, lat, lon)
 	if err != nil {
-		return Weather{}, err
+		return nil, err
 	}
 	weathers = append(weathers, w)
 	err = writeWeathers("weathers.json", weathers)
 	if err != nil {
-		return Weather{}, err
+		return nil, err
 	}
 	return w, nil
 }
 
 // writeWeathers запись массива погод в кэш
-func writeWeathers(fileName string, weathers []Weather) error {
+func writeWeathers(fileName string, weathers []*Weather) error {
 	f, err := os.Create(fileName)
 	if err != nil {
 		return err
@@ -310,15 +310,15 @@ func writeWeathers(fileName string, weathers []Weather) error {
 }
 
 // readWeathers чтение массива погод из кэша
-func readWeathers(fileName string) ([]Weather, error) {
+func readWeathers(fileName string) ([]*Weather, error) {
 	data, err := readFile(fileName)
 	if err != nil {
 		return nil, err
 	}
 	if data == nil {
-		return []Weather{}, err
+		return nil, err
 	}
-	var weathers []Weather
+	var weathers []*Weather
 	err = json.Unmarshal(data, &weathers)
 	if err != nil {
 		return nil, err
