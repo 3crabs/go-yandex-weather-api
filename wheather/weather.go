@@ -249,7 +249,7 @@ func (p Part) GetCondition() string {
 
 // GetWeather Получение погоды из Яндекс API
 func GetWeather(ctx context.Context, yandexWeatherApiKey string, lat float32, lon float32) (*Weather, error) {
-	url := fmt.Sprintf("https://api.weather.yandex.ru/v2/informers?lat=%f&lon=%f&lang=ru_RU", lat, lon)
+	url := fmt.Sprintf("https://api.weather.yandex.ru/v2/forecast?lat=%f&lon=%f&lang=ru_RU", lat, lon)
 	w := &Weather{}
 	err := requests.GetRequest(
 		ctx,
